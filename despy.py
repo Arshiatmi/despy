@@ -1,5 +1,16 @@
-from typing import Any
 from exceptions import ChoiceNotFound, UnknownError, DescisionJumpError
+
+
+class Config:
+    DESCISION_HASH = ""
+    FROM_ZERO = False
+
+    @classmethod
+    def print_descision_hash(cls, pretext="Descision Hash :", empty_text="You Are In Your First Descision.", end='\n'):
+        if cls.DESCISION_HASH:
+            print(pretext, cls.DESCISION_HASH, end=end)
+        else:
+            print(empty_text, end=end)
 
 
 class Descision:
@@ -10,22 +21,20 @@ class Descision:
         elif type(choices) == dict:
             self.choices = list(choices.keys())
             self.descision_map = choices
-            for i, j in choices.items():
-                j._add_to_hash(self.choices.index(i))
         else:
             raise ValueError(
                 "The Value Of Choices Must Be List Or Dictionary.")
         self.question = question
-        self.descision_hash = ""
 
         self.is_descision = True
         self.return_format = "i,t,d"  # Selected_index, Selected_text, Next Descision
         self.choosed_index = -1
         self.choosed_text = ""
 
-    def __select_choice(self, choice_index, choice_text):
+    def choose(self, choice_index, choice_text):
         self.choosed_index = choice_index
         self.choosed_text = choice_text
+        self._add_to_hash(self.choosed_index)
 
     def after(self, choice, next_descision):
         try:
@@ -38,9 +47,14 @@ class Descision:
             next_descision._add_to_hash(index)
 
     def _add_to_hash(self, index_to_add):
-        self.descision_hash = self.descision_hash + str(index_to_add)
+        if Config.FROM_ZERO:
+            Config.DESCISION_HASH = Config.DESCISION_HASH + \
+                str(index_to_add)
+        else:
+            Config.DESCISION_HASH = Config.DESCISION_HASH + \
+                str(int(index_to_add)+1)
 
-    def __pretty_print(self, choices):
+    def _pretty_print(self, choices):
         for c, i in enumerate(choices):
             print(c+1, "->", i)
 
@@ -70,14 +84,16 @@ class Descision:
     def __call__(self):
         self.execute()
 
-    def execute(self):
+    def execute(self, get_input=True):
         try:
             if self.question:
                 print(self.question)
-            self.__pretty_print(self.choices)
-            index = int(input())
-            self.__select_choice(index-1, self.choices[index-1])
-            return self.__return_content()
+            self._pretty_print(self.choices)
+            if get_input:
+                index = int(input())
+                self.choose(index-1, self.choices[index-1])
+                return self.__return_content()
+            return None
         except IndexError:
             raise ChoiceNotFound("There Is Not Such Choice.")
         except Exception as e:
@@ -104,19 +120,26 @@ class Descision:
 
 
 class FinalDescision:
+
     def __init__(self, text=""):
         self.text = text
-        self.descision_hash = ""
+        self.is_descision = True
 
     def _add_to_hash(self, index_to_add):
-        self.descision_hash = self.descision_hash + str(index_to_add)
+        if Config.FROM_ZERO:
+            Config.DESCISION_HASH = Config.DESCISION_HASH + \
+                str(index_to_add)
+        else:
+            Config.DESCISION_HASH = Config.DESCISION_HASH + \
+                str(int(index_to_add)+1)
 
     def __call__(self, print_text=False):
         if self.text:
             if print_text:
                 print(self.text)
+                Config.print_descision_hash()
             else:
-                return self.text
+                return self.text, Config.DESCISION_HASH
 
     def has_next_descision(self):
         return False
